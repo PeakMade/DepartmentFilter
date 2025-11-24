@@ -154,8 +154,8 @@
         </div>
         
         <div class="api-url">
-            <strong>Testing API:</strong>
-            https://peakauth-rg.calmcliff-d4a82c7d.eastus.azurecontainerapps.io
+            <strong>Testing Endpoint:</strong>
+            https://peakauth-rg.calmcliff-d4a82c7d.eastus.azurecontainerapps.io/api/auth/login
         </div>
     </div>
 
@@ -171,20 +171,25 @@
             resultBox.textContent = 'Checking...';
             
             try {
-                // Test authentication by calling the health endpoint first
-                const healthResponse = await fetch(`${API_URL}/`);
-                const healthData = await healthResponse.json();
+                // Call the authentication login endpoint
+                const response = await fetch(`${API_URL}/api/auth/login`);
+                const data = await response.json();
                 
-                // If we get here, the API is reachable
-                if (healthData.status === 'healthy') {
+                // Check if we got an auth_url back
+                if (response.ok && data.auth_url && data.state) {
+                    // Authentication module is working correctly
                     resultBox.className = 'result-box yes';
                     resultBox.textContent = '✓ YES';
+                    console.log('Auth URL received:', data.auth_url);
+                    console.log('State:', data.state);
                 } else {
+                    // Did not receive expected response
                     resultBox.className = 'result-box no';
                     resultBox.textContent = '✗ NO';
+                    console.error('Unexpected response:', data);
                 }
             } catch (error) {
-                // Connection failed
+                // Connection failed or error occurred
                 resultBox.className = 'result-box no';
                 resultBox.textContent = '✗ NO';
                 console.error('Error:', error);
