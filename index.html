@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 50px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 40px;
+            font-size: 2em;
+        }
+        
+        #goButton {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 20px 60px;
+            border-radius: 50px;
+            font-size: 1.5em;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.3s;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 30px;
+        }
+        
+        #goButton:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);
+        }
+        
+        #goButton:active {
+            transform: scale(0.98);
+        }
+        
+        #goButton:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .result-box {
+            margin-top: 30px;
+            padding: 30px;
+            border-radius: 15px;
+            font-size: 2em;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .result-box.waiting {
+            background: #f8f9fa;
+            color: #999;
+            border: 3px dashed #ddd;
+        }
+        
+        .result-box.checking {
+            background: #fff3cd;
+            color: #856404;
+            border: 3px solid #ffeaa7;
+            animation: pulse 1s infinite;
+        }
+        
+        .result-box.yes {
+            background: #d4edda;
+            color: #155724;
+            border: 3px solid #28a745;
+            animation: successPop 0.5s ease;
+        }
+        
+        .result-box.no {
+            background: #f8d7da;
+            color: #721c24;
+            border: 3px solid #dc3545;
+            animation: errorShake 0.5s ease;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        @keyframes successPop {
+            0% { transform: scale(0.8); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes errorShake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        
+        .api-url {
+            margin-top: 30px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            font-size: 0.85em;
+            color: #666;
+            word-break: break-all;
+        }
+        
+        .api-url strong {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Auth Test</h1>
+        
+        <button id="goButton">GO</button>
+        
+        <div id="resultBox" class="result-box waiting">
+            Ready to Test
+        </div>
+        
+        <div class="api-url">
+            <strong>Testing API:</strong>
+            https://peakauth-rg.calmcliff-d4a82c7d.eastus.azurecontainerapps.io
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://peakauth-rg.calmcliff-d4a82c7d.eastus.azurecontainerapps.io';
+        const goButton = document.getElementById('goButton');
+        const resultBox = document.getElementById('resultBox');
+
+        goButton.addEventListener('click', async () => {
+            // Disable button and show checking state
+            goButton.disabled = true;
+            resultBox.className = 'result-box checking';
+            resultBox.textContent = 'Checking...';
+            
+            try {
+                // Test authentication by calling the health endpoint first
+                const healthResponse = await fetch(`${API_URL}/`);
+                const healthData = await healthResponse.json();
+                
+                // If we get here, the API is reachable
+                if (healthData.status === 'healthy') {
+                    resultBox.className = 'result-box yes';
+                    resultBox.textContent = '✓ YES';
+                } else {
+                    resultBox.className = 'result-box no';
+                    resultBox.textContent = '✗ NO';
+                }
+            } catch (error) {
+                // Connection failed
+                resultBox.className = 'result-box no';
+                resultBox.textContent = '✗ NO';
+                console.error('Error:', error);
+            } finally {
+                // Re-enable button
+                goButton.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
