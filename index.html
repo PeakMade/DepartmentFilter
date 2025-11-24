@@ -249,7 +249,7 @@
             try {
                 // Call the authentication login endpoint with timeout
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+                const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
                 
                 const loginResponse = await fetch(`${API_URL}/api/auth/login`, {
                     signal: controller.signal
