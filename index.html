@@ -171,8 +171,14 @@
             resultBox.textContent = 'Checking...';
             
             try {
-                // Step 1: Call the authentication login endpoint
-                const loginResponse = await fetch(`${API_URL}/api/auth/login`);
+                // Step 1: Call the authentication login endpoint with timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+                
+                const loginResponse = await fetch(`${API_URL}/api/auth/login`, {
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
                 
                 if (!loginResponse.ok) {
                     resultBox.className = 'result-box no';
@@ -224,8 +230,13 @@
             } catch (error) {
                 // Connection failed or error occurred
                 resultBox.className = 'result-box no';
-                resultBox.textContent = '✗ NO';
-                console.error('Error:', error);
+                if (error.name === 'AbortError') {
+                    resultBox.textContent = '✗ NO - TIMEOUT';
+                    console.error('Request timed out after 5 seconds');
+                } else {
+                    resultBox.textContent = '✗ NO';
+                    console.error('Error:', error);
+                }
             } finally {
                 // Re-enable button
                 goButton.disabled = false;
