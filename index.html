@@ -171,22 +171,55 @@
             resultBox.textContent = 'Checking...';
             
             try {
-                // Call the authentication login endpoint
-                const response = await fetch(`${API_URL}/api/auth/login`);
-                const data = await response.json();
+                // Step 1: Call the authentication login endpoint
+                const loginResponse = await fetch(`${API_URL}/api/auth/login`);
                 
-                // Check if we got an auth_url back
-                if (response.ok && data.auth_url && data.state) {
-                    // Authentication module is working correctly
-                    resultBox.className = 'result-box yes';
-                    resultBox.textContent = '✓ YES';
-                    console.log('Auth URL received:', data.auth_url);
-                    console.log('State:', data.state);
+                if (!loginResponse.ok) {
+                    resultBox.className = 'result-box no';
+                    resultBox.textContent = '✗ NO';
+                    console.error('Login endpoint failed:', loginResponse.status);
+                    return;
+                }
+                
+                const loginData = await loginResponse.json();
+                
+                // Check if we got expected login response with auth_url
+                if (loginData.auth_url && loginData.state) {
+                    console.log('✓ Login endpoint working - Auth URL received');
+                    console.log('Auth URL:', loginData.auth_url);
+                    console.log('State:', loginData.state);
+                    
+                    // If there's a success field and api_token, test the /me endpoint too
+                    if (loginData.success && loginData.api_token) {
+                        console.log('✓ API Token received:', loginData.api_token);
+                        
+                        // Step 2: Test /me endpoint with the token
+                        const meResponse = await fetch(`${API_URL}/api/auth/me`, {
+                            headers: {
+                                'Authorization': `Bearer ${loginData.api_token}`
+                            }
+                        });
+                        
+                        if (meResponse.ok) {
+                            const meData = await meResponse.json();
+                            console.log('✓ /me endpoint working - User data:', meData);
+                            resultBox.className = 'result-box yes';
+                            resultBox.textContent = '✓ YES';
+                        } else {
+                            console.log('⚠ /me endpoint failed but login works');
+                            resultBox.className = 'result-box yes';
+                            resultBox.textContent = '✓ YES';
+                        }
+                    } else {
+                        // Auth URL works, that's enough
+                        resultBox.className = 'result-box yes';
+                        resultBox.textContent = '✓ YES';
+                    }
                 } else {
                     // Did not receive expected response
                     resultBox.className = 'result-box no';
                     resultBox.textContent = '✗ NO';
-                    console.error('Unexpected response:', data);
+                    console.error('Unexpected response format:', loginData);
                 }
             } catch (error) {
                 // Connection failed or error occurred
