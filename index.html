@@ -37,6 +37,22 @@
             font-size: 2em;
         }
         
+        #emailInput {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #ddd;
+            border-radius: 50px;
+            font-size: 1em;
+            margin-bottom: 20px;
+            text-align: center;
+            transition: border-color 0.3s;
+        }
+        
+        #emailInput:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
         #goButton {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -109,6 +125,51 @@
             animation: errorShake 0.5s ease;
         }
         
+        .data-display {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-top: 20px;
+            text-align: left;
+            max-width: 600px;
+            display: none;
+        }
+        
+        .data-display.visible {
+            display: block;
+        }
+        
+        .data-display h3 {
+            margin-top: 0;
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .data-display pre {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 0.9em;
+            line-height: 1.6;
+        }
+        
+        .data-field {
+            margin-bottom: 10px;
+            padding: 8px;
+            background: #f9f9f9;
+            border-radius: 5px;
+        }
+        
+        .data-field strong {
+            color: #333;
+            display: inline-block;
+            min-width: 150px;
+        }
+        
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.7; }
@@ -147,11 +208,15 @@
     <div class="container">
         <h1>🔐 Auth Test</h1>
         
+        <input type="email" id="emailInput" placeholder="Enter your email" />
+        
         <button id="goButton">GO</button>
         
         <div id="resultBox" class="result-box waiting">
             Ready to Test
         </div>
+        
+        <div id="dataDisplay" class="data-display"></div>
         
         <div class="api-url">
             <strong>Testing Endpoint:</strong>
@@ -162,16 +227,27 @@
     <script>
         const API_URL = 'https://peakauth-rg.calmcliff-d4a82c7d.eastus.azurecontainerapps.io';
         const goButton = document.getElementById('goButton');
+        const emailInput = document.getElementById('emailInput');
         const resultBox = document.getElementById('resultBox');
+        const dataDisplay = document.getElementById('dataDisplay');
 
         goButton.addEventListener('click', async () => {
+            const email = emailInput.value.trim();
+            
+            if (!email) {
+                resultBox.className = 'result-box no';
+                resultBox.textContent = 'Please enter an email';
+                return;
+            }
             // Disable button and show checking state
             goButton.disabled = true;
             resultBox.className = 'result-box checking';
-            resultBox.textContent = 'Checking...';
+            resultBox.textContent = '⏳ CHECKING...';
+            dataDisplay.className = 'data-display';
+            dataDisplay.innerHTML = '';
             
             try {
-                // Step 1: Call the authentication login endpoint with timeout
+                // Call the authentication login endpoint with timeout
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
                 
@@ -187,45 +263,36 @@
                     return;
                 }
                 
-                const loginData = await loginResponse.json();
+                const data = await loginResponse.json();
                 
-                // Check if we got expected login response with auth_url
-                if (loginData.auth_url && loginData.state) {
-                    console.log('✓ Login endpoint working - Auth URL received');
-                    console.log('Auth URL:', loginData.auth_url);
-                    console.log('State:', loginData.state);
+                // Check if response has success field
+                if (data && data.success) {
+                    resultBox.className = 'result-box yes';
+                    resultBox.textContent = '✓ YES';
                     
-                    // If there's a success field and api_token, test the /me endpoint too
-                    if (loginData.success && loginData.api_token) {
-                        console.log('✓ API Token received:', loginData.api_token);
-                        
-                        // Step 2: Test /me endpoint with the token
-                        const meResponse = await fetch(`${API_URL}/api/auth/me`, {
-                            headers: {
-                                'Authorization': `Bearer ${loginData.api_token}`
-                            }
-                        });
-                        
-                        if (meResponse.ok) {
-                            const meData = await meResponse.json();
-                            console.log('✓ /me endpoint working - User data:', meData);
-                            resultBox.className = 'result-box yes';
-                            resultBox.textContent = '✓ YES';
-                        } else {
-                            console.log('⚠ /me endpoint failed but login works');
-                            resultBox.className = 'result-box yes';
-                            resultBox.textContent = '✓ YES';
-                        }
-                    } else {
-                        // Auth URL works, that's enough
-                        resultBox.className = 'result-box yes';
-                        resultBox.textContent = '✓ YES';
-                    }
+                    // Display all the data
+                    dataDisplay.className = 'data-display visible';
+                    dataDisplay.innerHTML = `
+                        <h3>Authentication Response</h3>
+                        <div class="data-field"><strong>Session ID:</strong> ${data.session_id || 'N/A'}</div>
+                        <div class="data-field"><strong>API Token:</strong> ${data.api_token || 'N/A'}</div>
+                        <div class="data-field"><strong>Token Type:</strong> ${data.token_type || 'N/A'}</div>
+                        <div class="data-field"><strong>Expires In:</strong> ${data.expires_in || 'N/A'} seconds</div>
+                        ${data.user ? `
+                            <h3 style="margin-top: 20px;">User Information</h3>
+                            <div class="data-field"><strong>ID:</strong> ${data.user.id || 'N/A'}</div>
+                            <div class="data-field"><strong>Microsoft ID:</strong> ${data.user.microsoft_id || 'N/A'}</div>
+                            <div class="data-field"><strong>Email:</strong> ${data.user.email || 'N/A'}</div>
+                            <div class="data-field"><strong>Name:</strong> ${data.user.name || 'N/A'}</div>
+                            <div class="data-field"><strong>Given Name:</strong> ${data.user.given_name || 'N/A'}</div>
+                            <div class="data-field"><strong>Family Name:</strong> ${data.user.family_name || 'N/A'}</div>
+                        ` : ''}
+                        <h3 style="margin-top: 20px;">Raw JSON</h3>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
                 } else {
-                    // Did not receive expected response
                     resultBox.className = 'result-box no';
                     resultBox.textContent = '✗ NO';
-                    console.error('Unexpected response format:', loginData);
                 }
             } catch (error) {
                 // Connection failed or error occurred
